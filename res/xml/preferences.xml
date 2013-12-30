@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+            <Preference 
+                android:title="@string/obd2"
+
+            	android:key="bt_device"
+            	android:defaultValue="@string/default_none"
+            	>
+            	
+                    
+            		 <intent
+            		 	android:action="android.intent.action.VIEW"
+             			android:targetPackage="test.example.helloworld"
+             			android:targetClass="test.example.helloworld.DisplayMessageActivity" /> 
+               	
+            </Preference>
+            <ListPreference 
+                android:entries="@array/unitsArr" 
+                android:title="Fuel Economy Units" 
+                android:key="units_pref" 
+                android:entryValues="@array/unitsStrVal" 
+                 
+                android:defaultValue="MPG" />            
+            <CheckBoxPreference
+		        android:key="idle_stats_pref"
+		        android:title="@string/idle_stats_title"
+		        android:summary="@string/idle_stats_summ"
+		        android:defaultValue="true" />
+            
+
+</PreferenceScreen>
