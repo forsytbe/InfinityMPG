@@ -1,16 +1,12 @@
 package com.devsyte.infinitympg;
 
 
-import android.app.Activity;
-import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
+
 import android.os.Bundle;
-import android.preference.Preference;
 import android.preference.PreferenceActivity;
 
-import android.preference.PreferenceFragment;
 
+/*  This activity simply starts and immediately displays the fragment that shows the various preferences*/
 public class Settings extends PreferenceActivity{
 	
 

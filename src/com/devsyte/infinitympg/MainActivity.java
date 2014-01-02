@@ -3,19 +3,10 @@ package com.devsyte.infinitympg;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-
-
-
-
-
-import java.util.Hashtable;
 
 import android.media.MediaScannerConnection;
 import android.os.Bundle;
@@ -29,17 +20,13 @@ import android.text.format.Time;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.content.Context;
+
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.DialogInterface.OnClickListener;
-import android.content.SharedPreferences.Editor;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
+
 import android.graphics.Typeface;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -48,8 +35,17 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.bluetooth.*;
 
+
+/*This is the main display.  This is the screen the user will first encounter, 
+ * and where they will spend most of their time.
+ * 
+ * From this activity users can start a new trip or continue the most recent trip.
+ * 
+ * The streaming fuel economy data is displayed as the focal point of this activity
+ * 
+ * */
 public class MainActivity extends Activity {
-    public final static String EXTRA_MESSAGE = "test.example.helloworld.MESSAGE";
+
 	protected BluetoothAdapter mBluetoothAdapter;
 	protected obdService mobdService = null;
 	protected ArrayAdapter<String> cmdPrompt;

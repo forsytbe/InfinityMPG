@@ -2,16 +2,18 @@ package com.devsyte.infinitympg;
 
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Bundle;
 import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 
 
+/*  This fragment is focused automatically upon starting the Settings activity.
+ * 
+ *  Simply displays a list of user-changeable preferences
+ * */
 public class SettingsFragment extends PreferenceFragment {
 
 	SharedPreferences.OnSharedPreferenceChangeListener listener= new SharedPreferences.OnSharedPreferenceChangeListener() {

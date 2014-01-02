@@ -1,17 +1,10 @@
 package com.devsyte.infinitympg;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.text.DecimalFormat;
-
-
-
-
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
@@ -22,15 +15,17 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
-import android.text.format.Time;
-import android.util.Log;
-import android.widget.ArrayAdapter;
-import android.widget.ProgressBar;
 
 
+/*  This is the primary class for establishing, and maintaining the ELM327 Bluetooth Connection,
+ *  As well as polling for data and the computations that need to be performed on that data.
+ *  
+ *  The threads involved communicate with the MainActivity via the handler that is passed to the
+ *  obdService constructor
+ *   
+ *   */
 public class obdService {
 	
 	
@@ -41,7 +36,6 @@ public class obdService {
 	
 	
 	Context parentContext;
-	private int numSent = 0;
 	public static final int STATE_UNCONNECTED = 0;
 	public static final int STATE_CONNECTED = 1;
 	public int mState = 0;
@@ -96,13 +90,12 @@ public class obdService {
 	private class ConnectThread extends Thread{
 		
 		private final BluetoothSocket mmSocket;
-		private final BluetoothDevice mmDevice;
-		protected BluetoothAdapter mBluetoothAdapter;
+
 		
 		
 		public ConnectThread(BluetoothDevice device){
 			BluetoothSocket tmp = null;
-			mmDevice = device;
+
 
 			try{
 				Method m = device.getClass().getMethod("createRfcommSocket", new Class[] {int.class});
