@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="unitsArr">        
+        <item>MPG: Miles per Gallon</item>
+        <item>L/100KM: Liters per 100 Kilometers</item>
+        <item>MPG(UK): Miles per Imperial Gallon</item>
+        </string-array>
+     <string-array name="unitsStrVal">
+        <item>MPG</item>
+        <item>L/100KM</item>
+        <item>MPG(UK)</item> 
+         
+         
+     </string-array>
+</resources>

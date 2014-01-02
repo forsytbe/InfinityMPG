@@ -1,0 +1,93 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" 
+    android:background="@android:color/black">
+
+    <TextView
+        android:id="@+id/appName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+
+        android:text="@string/app_name"
+        android:textSize="48sp" 
+        android:textColor = "@android:color/white"
+        android:background ="@drawable/infinity"
+        android:keepScreenOn="true"
+        android:paddingTop = "24dp"/>
+
+    <TextView
+        android:id="@+id/mainDisplay"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/appName"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop = "-20dp"
+
+        android:textColor = "@android:color/white"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:textSize="110sp" 
+        android:maxLines = "1"
+    />
+     <ProgressBar
+         android:id="@+id/loadingContent"
+         
+         android:layout_below="@+id/mainDisplay"
+         
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"
+         style="@android:style/Widget.ProgressBar.Large"
+         android:layout_centerHorizontal="true" />
+    <Button
+        android:id="@+id/start_or_save"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="35dp"
+        style="@style/cust_button" />
+
+    <Button
+        android:id="@+id/continue_trip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="100dp" 
+        android:onClick="continueTrip"
+        android:text="@string/contButt" 
+        
+        style="@style/cust_button" />
+
+    <TextView
+        android:id="@+id/unitDisplay"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/mainDisplay"
+        android:layout_alignParentRight="true"
+        android:layout_marginTop="-32dp" 
+ 
+        android:textColor = "@android:color/white"
+        android:textAppearance="?android:attr/textAppearanceLarge" 
+        android:textSize="40sp"
+        />
+    
+    <TextView
+        android:id="@+id/subDisplay"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/appName"
+        android:layout_alignParentLeft="true"
+        
+        android:layout_marginTop="215dp"
+        android:layout_marginLeft ="15dp"
+        android:textColor = "@android:color/white"
+        android:textAppearance="?android:attr/textAppearanceLarge" 
+        android:textSize="28sp"
+        
+        />
+
+</RelativeLayout>
