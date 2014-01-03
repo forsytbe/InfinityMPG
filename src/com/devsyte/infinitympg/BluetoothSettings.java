@@ -27,7 +27,19 @@ import android.preference.PreferenceManager;
 import android.provider.Settings;
 
 
-
+/*  This activity is responsible for presenting a list of available Bluetooth devices,
+ *  and prompting the user to select a device as the default.  The app will attempt to connect after
+ *  the user has selected a device.  Android should prompt the user to pair the ELM327 device upon 
+ *  an attempted connection to an unpaired device.
+ *  
+ *  This activity gains focus upon either:
+ *    User selection from the 'Settings' activity, or
+ *    redirection upon user attempting to start a trip without an available default device
+ * 
+ * 
+ * 
+ * 
+ */
 public class BluetoothSettings extends Activity {
 	
 	protected static final String DEVICE_DATA = "test.example.helloworld.DEVICE_DATA";
@@ -41,8 +53,6 @@ public class BluetoothSettings extends Activity {
 			if(BluetoothDevice.ACTION_FOUND.equals(action)){
 				BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
 				mArrayAdapter.add(device.getName()+"\n"+ device.getAddress());
-			}else{
-				//mArrayAdapter.add("No discoverable Bluetooth devices available");
 			}
 		}
 	};
@@ -156,13 +166,7 @@ public class BluetoothSettings extends Activity {
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
 		case android.R.id.home:
-			// This ID represents the Home or Up button. In the case of this
-			// activity, the Up button is shown. Use NavUtils to allow users
-			// to navigate up one level in the application structure. For
-			// more details, see the Navigation pattern on Android Design:
-			//
-			// http://developer.android.com/design/patterns/navigation.html#up-vs-back
-			//
+
 			NavUtils.navigateUpFromSameTask(this);
 			return true;
 		}
@@ -175,7 +179,7 @@ public class BluetoothSettings extends Activity {
 	    .setMessage( message + " Press OK to exit." )
 	    .setPositiveButton("OK", new OnClickListener() {
 	        public void onClick(DialogInterface arg0, int arg1) {
-	          //finish();
+
 	        }
 	    }).show();
 	  }

@@ -44,6 +44,11 @@ public class obdService {
 	public double MAF = 0; //mass air flow, g/s
 	public double MPG = 0; //miles/gallon
 	
+	
+	/*
+	 * Just some useful constants for unit conversion
+	 * 
+	 */
 	public static final double  gramGasToGal = 2835.0;
 	public static final double gramGasToImpGal = 3410.0;
 	public static final double gramGasToLiter = 750.0;
@@ -87,6 +92,10 @@ public class obdService {
 	
 	}
 	
+	/*  This thread establishes a connection with the ELM327
+	 * 
+	 * Relays failure or success to MainActivity via a message to the handler
+	 */
 	private class ConnectThread extends Thread{
 		
 		private final BluetoothSocket mmSocket;
@@ -150,7 +159,17 @@ public class obdService {
 		
 	};
 	
-	
+	/* This thread manages the connected ELM327 device, 
+	 * and performs most of the logic necessary to display fuel economy data to the user
+	 * 
+	 * The commands in run() and parseResponse() are ELM327 standard commands
+	 * 	(review your ELM327 device documentation)
+	 * 	and standard OBD-II PID's, which are relayed from the ELM327 to the vehicles
+	 *  on-board computer in a format specified by the ELM327
+	 *  
+	 *  A fairly comphrehensive list of standard PID's can be reviewed on the
+	 *  wikipedia page for 'OBD-II PIDs'
+	 */
 	private class ConnectedThread extends Thread{
 		
 		private final BluetoothSocket mmSocket;
@@ -214,7 +233,7 @@ public class obdService {
 
 								parseResponse(sb, bytes);	//this throws an exception if write fails
 
-								//message = mHandler.obtainMessage(MainActivity.MESSAGE_READ, -1, -1, sb);						
+					
 							}				
 
 				}
@@ -290,7 +309,7 @@ public class obdService {
 					byteOne = Integer.parseInt(tmpStr.substring(0, tmpStr.indexOf(" ")), 16);
 					byteTwo = Integer.parseInt(tmpStr.substring(tmpStr.indexOf(" ")+1), 16);
 					MAF = (((double)byteOne*256.0)+(double)byteTwo)/100.0;
-					//double LPH = (((double)byteOne*256.0)+(double)byteTwo)*.05;
+
 					DecimalFormat df = new DecimalFormat("#.##");
 
 					
@@ -300,13 +319,13 @@ public class obdService {
 						if(Double.valueOf(df.format(vSpeed)) <= 0.5){
 							
 							MPG = (MAF*obdService.stoichRatio*3600.0)/obdService.gramGasToGal; //gallons per hour, MAF is in gram/second
-							//MPG = LPH* literGasToGal;	
+
 							calcMessage = mHandler.obtainMessage(MainActivity.WRITE_SCREEN, 1, -1);
 	
 						}else{
 							//miles pergallon, vspeed is in km/hr, MAF is in grams/seconds
 							MPG = (vSpeed*obdService.kmToMi)/((MAF*obdService.stoichRatio*3600.0)/obdService.gramGasToGal);
-							//MPG =  (vSpeed*obdService.kmToMi)/ (LPH*literGasToGal);
+
 							calcMessage = mHandler.obtainMessage(MainActivity.WRITE_SCREEN, 0, -1);
 							
 						}
