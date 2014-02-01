@@ -179,6 +179,8 @@ public class obdService {
 		private String obdCommand = "";
 		private String reply = "";
 		
+		Handler tHandler;
+		
 		public ConnectedThread(BluetoothSocket socket){
 			mmSocket = socket;
 			InputStream tmpIn = null;
