@@ -66,8 +66,8 @@ public final class R {
         public static final int cancel=0x7f07001a;
         public static final int contButt=0x7f070007;
         public static final int curConsump=0x7f07000f;
-        public static final int default_none=0x7f070020;
-        public static final int dispAvg=0x7f07001f;
+        public static final int default_none=0x7f070022;
+        public static final int dispAvg=0x7f070021;
         public static final int edit_message=0x7f070005;
         public static final int find_device=0x7f070008;
         public static final int gal=0x7f070014;
@@ -77,10 +77,12 @@ public final class R {
         public static final int logBut=0x7f070013;
         public static final int mpg=0x7f070015;
         public static final int no_devices=0x7f07001b;
-        public static final int obd2=0x7f07001e;
+        public static final int obd2=0x7f070020;
         public static final int ok=0x7f070019;
         public static final int pairBut=0x7f07001c;
         public static final int saveBut=0x7f07001d;
+        public static final int service_label=0x7f07001e;
+        public static final int service_started=0x7f07001f;
         public static final int setBut=0x7f070012;
         public static final int start=0x7f070006;
         public static final int tankData=0x7f070011;
@@ -89,7 +91,7 @@ public final class R {
         public static final int title_activity_bluetooth_settings=0x7f07000c;
         public static final int title_activity_main=0x7f07000b;
         public static final int title_activity_settings=0x7f07000d;
-        public static final int title_activity_view_prev=0x7f070021;
+        public static final int title_activity_view_prev=0x7f070023;
         public static final int title_activity_view_prevs=0x7f070002;
         public static final int trackData=0x7f070010;
         public static final int viewPrev=0x7f070001;

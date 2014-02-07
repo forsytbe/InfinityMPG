@@ -9,10 +9,10 @@
     <string name="edit_message">Enter a message</string>
     <string name="start">New Trip</string>
     <string name="contButt">Continue Trip</string>
-    <string name="find_device">Find a Device...</string>
+    <string name="find_device">Find a Device&#8230;</string>
     <string name="action_settings">Settings</string>
     <string name="hello_world">FuelEconomizer</string>
-    <string name="title_activity_main">MainActivity</string>
+    <string name="title_activity_main">InfinityMPG</string>
     <string name="title_activity_bluetooth_settings">Find OBD2 Bluetooth Device</string>
     <string name="title_activity_settings">Settings</string>
     <string name="tankFuel">Fuel Remaining in Tank</string>
@@ -29,8 +29,10 @@
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
     <string name="no_devices">No bondared devices.  Please pair a device.</string>
-    <string name="pairBut">Pair others...</string>
+    <string name="pairBut">Pair others&#8230;</string>
     <string name="saveBut">End and Save</string>
+    <string name="service_label">InfinityMPG</string>
+    <string name="service_started">InfinityMPG Connected&#8230;</string>
     <string name="obd2">OBD2 Connector</string>
     <string name="dispAvg">AVG MPG\nFOR TRIP</string>
     <string name="default_none">None</string>

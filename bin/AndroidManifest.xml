@@ -30,9 +30,15 @@
             android:label="@string/title_activity_bluetooth_settings" >
         </activity>
         <activity
+            android:name="com.devsyte.infinitympg.Settings"
+            android:label="@string/title_activity_settings" >
+        </activity>
+        <activity
             android:name="com.devsyte.infinitympg.ViewPrevActivity"
             android:label="@string/title_activity_view_prev" >
         </activity>
+        <service android:name="com.devsyte.infinitympg.ConnectedService"></service>
+        
     </application>
 
 </manifest>
