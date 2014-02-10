@@ -161,22 +161,7 @@ public class MainActivity extends Activity {
 					calcedAvg = currSUM / currNDP;
 					runningMpgAvg += currMPG;
 
-					if (unitOutput.equals("MPG")) {
-						// this will convert km/h to mi/h
-						// this converts a gram of gas/second to gallon/hour
-						currDisplayData = currMPG;
-						currSubDispData = calcedAvg;
 
-					} else if (unitOutput.equals("L/100KM")) {
-
-						currDisplayData = 235.2 / currMPG;
-
-						currSubDispData = 235.2 / calcedAvg;
-					} else if (unitOutput.equals("MPG(UK)")) {
-						currDisplayData = currMPG * 1.201;
-
-						currSubDispData = calcedAvg * 1.201;
-					}
 
 					break;
 				case 1:
