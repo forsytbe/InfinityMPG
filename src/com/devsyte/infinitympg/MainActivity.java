@@ -47,6 +47,12 @@ import android.bluetooth.*;
  * 
  * The streaming fuel economy data is displayed as the focal point of this activity
  * 
+ *  This is accomplished via an instantiation of the obdService class, which 
+ *  upon starting will initiate and maintain a Bluetooth Connection with an ELM327 Device
+ *  as a Service.
+ *  
+ *  Calling 
+ *  
  * */
 public class MainActivity extends Activity {
 
@@ -56,15 +62,9 @@ public class MainActivity extends Activity {
 	 * obdService is the class that performs all the heavy-lifting as pertaining
 	 * to the ELM327. It will be instantiated once it is confirmed the user's
 	 * device supports Bluetooth. From MainActivity one must only call start and
-	 * stop on an obdService object, and the MainActivity handler handles all
-	 * messages from the obdService threads.
+	 * stop on an obdService object, which will then send data directly to the MainActivity
 	 */
 	protected obdService mobdService = null;
-
-	/*
-	 * cmdPrompt is the log of the prompts and commands exchanged between the
-	 * app and the ELM327 device. Used for manual debugging.
-	 */
 
 
 	/*
@@ -78,7 +78,7 @@ public class MainActivity extends Activity {
 
 	/*
 	 * These flags are used sent via message (from the obdService
-	 * ConnectedThread) to the handler, where the data accompanying the message
+	 * ) to the MainActivity handler, where the data accompanying the message
 	 * can be interpreted, based on aforementioned flag
 	 */
 	public static final int WRITE_SCREEN = 1;
@@ -88,22 +88,9 @@ public class MainActivity extends Activity {
 	public static final int CONNECT_SUCCESS = 5;
 	public static final int CONNECT_FAILURE = 6;
 
-	/*
-	 * These are the primary members the hold the data to be displayed to the
-	 * user, as well as tracking the overall fuel economy of the current trip.
-	 * The values of these members are saved to the files: "mpg_avgs.json" and
-	 * "mpg_data.json" at predetermined intervals or upon trip completion.
-	 * 
-	 * These members will be set to the saved value (all of which are
-	 * SharedPreferences), that is, the value the member had upon completion of
-	 * the most recent trip, or 0, if there was no previous trip, or the user
-	 * opts to start a new trip
+	/* mMessenger is where the messages from the obdService object will arrive.
+	 *  obdService performs all the logic and returns only what needs to be displayed in the main actvity
 	 */
-	private double currDisplayData = 0.0;
-	private double currSubDispData = 0.0;
-
-	Messenger mService = null;
-
 	final Messenger mMessenger = new Messenger(new IncomingHandler());
 
 	class IncomingHandler extends Handler {
@@ -114,101 +101,26 @@ public class MainActivity extends Activity {
 			ProgressBar waiting = (ProgressBar) findViewById(R.id.loadingContent);
 			waiting.setVisibility(ProgressBar.GONE);
 
-			SharedPreferences prefs = PreferenceManager
-					.getDefaultSharedPreferences(getApplicationContext());
-			String unitOutput = "";
-			DecimalFormat df = new DecimalFormat("#.00");
-
 			switch (msg.what) {
 	
 			case WRITE_SCREEN:
-				Time now = new Time();
-				now.setToNow();
-				String curTime = "\"" + Integer.toString(now.hour) + "h"
-						+ Integer.toString(now.minute) + "m"
-						+ Integer.toString(now.second) + "s\" : ";
-
-				unitOutput = prefs.getString("units_pref", "MPG");
-
-				currMPG = msg.getData().getDouble("mpgData");// this comes back
-																// as MPG
-																// regardless of
-																// user
-																// preference
-				++numDataPts;
-				currDisplayData = currMPG;
-				/*
-				 * currMPG is what is written to the file. ** The file is ALWAYS
-				 * stored as MPG, regardless of user preference **
-				 * 
-				 * runningavg will store the *total* number of data points for
-				 * the file and the avg associated with them every iteration we
-				 * just add the new point to the set
-				 * 
-				 * Case 0 is standard, the engine is running, vehicle is moving
-				 * Case 1 is engine is running, vehicle is stopped (Theoretical)
-				 * Case 2 engine is off, this flag is not actually sent or used
-				 * But it's here to think about. Currently, this 'case' of the
-				 * engine being off and the device still streaming would simply
-				 * default to case 1.
-				 */
-				double calcedAvg = 0.0;
+		
 				switch (msg.arg1) {
 
-				case 0:
-					currSUM += currMPG;
-					++currNDP;
-					calcedAvg = currSUM / currNDP;
-					runningMpgAvg += currMPG;
+				case obdService.RETURNED_MPG:
 
+					mainText.setText(msg.getData().getString("disp_str"));
+					subText.setText("AVG " + msg.getData().getString("sub_pref_units")
+							+ ": " + msg.getData().getString("sub_disp_str"));
 
+					unitText.setText(msg.getData().getString("pref_units"));
+					break;
+				case obdService.RETURNED_BYTES:
+					mainText.setText(msg.getData().getString("disp_str"));
 
 					break;
-				case 1:
-					currSUM += 0.0;
-					++currNDP;
-					calcedAvg = currSUM / currNDP;
-					runningMpgAvg += 0.0;// 0.0, because thats the mpg you're
-											// getting
-					if (unitOutput.contentEquals("MPG")) {
-						// currMPG is coming back as gal/hour if the vehicle is
-						// stopped
-						currDisplayData = currMPG;
-						unitOutput = "G/HR";
-
-						currSubDispData = calcedAvg;
-
-					} else if (unitOutput.contentEquals("L/100KM")) {
-						currDisplayData = currMPG * 3.7854;
-						unitOutput = "L/HR";
-
-						currSubDispData = 235.2 / calcedAvg;
-					} else if (unitOutput.contentEquals("MPG(UK)")) {
-						currDisplayData = currMPG * 0.83267;
-						unitOutput = "G(UK)/HR";
-						currSubDispData = calcedAvg * 1.201;
-
-					}
-
-					if (!prefs.getBoolean("idle_stats_pref", true)) {
-
-						currDisplayData = 0.0;
-						unitOutput = prefs.getString("units_pref", "MPG");
-					}
-
-					break;
-				// TODO: Case 2: engine off?
 				}
 
-				mpgDataList.add("\t\t" + curTime + df.format(currMPG) + ",\r");
-				if (mpgDataList.size() >= 256) {
-					writeMpgData(fileStates.INPROG);
-				}
-
-				mainText.setText(df.format(currDisplayData));
-				subText.setText("AVG " + prefs.getString("units_pref", "MPG")
-						+ ": " + df.format(currSubDispData));
-				unitText.setText(unitOutput);
 				break;
 
 			/*
@@ -291,7 +203,7 @@ public class MainActivity extends Activity {
 			AlertBox("blue", "Bluetooth not supported");
 			finish();
 		} else {
-			mobdService = new obdService(this);
+			mobdService = new obdService(this, mMessenger);
 		}
 	}
 
@@ -329,15 +241,6 @@ public class MainActivity extends Activity {
 			});
 		}
 	}
-
-	/*
-	 * mHandler essentially drives the application display, receiving relevant
-	 * data from the ELM327 via messages from an obdService object, and then
-	 * displaying that data based on user preferences
-	 * 
-	 * Here the preferences are implemented, the data conversions done, and the
-	 * screen is written
-	 */
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -379,36 +282,20 @@ public class MainActivity extends Activity {
 
 		case 0:
 			if (resultCode == Activity.RESULT_OK) {
-
+				
 				SharedPreferences.Editor prefs = PreferenceManager
 						.getDefaultSharedPreferences(this).edit();
 				String deviceData = data.getExtras().getString(
 						BluetoothSettings.DEVICE_DATA);
 				prefs.putString("bt_device", deviceData).apply();
+				startService(data.getBundleExtra("shouldCont").getBoolean("cont"));
+				
 
 			}
 		}
 
 	}
 
-	/*
-	 * obdService.connect() is call that initiates both connection to and
-	 * streamming from the ELM327 From here on out, the application display is
-	 * driven by mHandler and user input.
-	 */
-	private void connectDevice(String deviceData) {
-		// Get the device MAC address
-
-		String address = deviceData.substring(deviceData.indexOf('\n') + 1);
-		// Get the BluetoothDevice object
-		BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
-		// Attempt to connect to the device
-		ProgressBar waiting = (ProgressBar) findViewById(R.id.loadingContent);
-		waiting.setVisibility(ProgressBar.VISIBLE);
-
-		mobdService.connect(device);
-
-	}
 
 	public void findDevice(View view) {
 		Intent intent = new Intent(this, BluetoothSettings.class);
@@ -439,7 +326,7 @@ public class MainActivity extends Activity {
 
 	/*
 	 * This function is called to start the connection with the ELM327 device,
-	 * and to stream data upon completion. Data is then displayed via mHandler.
+	 * and to stream data upon completion. Data is then displayed via mMessenger.
 	 * 
 	 * the argument 'boolean cont' specifies if the user opted to: continue the
 	 * last trip (true), or to start a new trip (false)
@@ -451,62 +338,57 @@ public class MainActivity extends Activity {
 		SharedPreferences prefs = PreferenceManager
 				.getDefaultSharedPreferences(this);
 
-		if (!cont) {
-			currSUM = 0.0;
-			currNDP = 1L;
-		}
 		String deviceName = prefs.getString("bt_device", "None");
+		
+		
 		if (deviceName.equals("None")) {
 
 			Intent intent = new Intent(this, BluetoothSettings.class);
-
-			startActivityForResult(intent, 0); // My displayMessageActivity
-												// needs renamed, but this
-												// allows the user to select a
-												// BT device
+			Bundle b = new Bundle();
+			b.putBoolean("cont", cont);
+			intent.putExtra("shouldCont", b);
+			startActivityForResult(intent, 0); 
 		} else {
+			String address = deviceName.substring(deviceName.indexOf('\n') + 1);
+			// Get the BluetoothDevice object
+			BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
+			// Attempt to connect to the device
+			ProgressBar waiting = (ProgressBar) findViewById(R.id.loadingContent);
+			waiting.setVisibility(ProgressBar.VISIBLE);
 
-			connectDevice(deviceName);
+
+			if (cont) {
+				mobdService.connect(device);
+				mobdService.doBindService();
+
+			}else{
+				mobdService.clearTripData();
+				mobdService.connect(device);
+				mobdService.doBindService();
+				mobdService.setMode(obdService.ServiceMode.MPG_MODE);
+			}
 
 		}
 	}
 
 	/*
-	 * This function is called: When the application loses focus and is still
-	 * connected to the ELM327 (in onStop()), When the user ends the trip
-	 * (presses the 'End and Save' button, When a disconnect occurs
-	 * (CONNECT_FAILURE message flag is sent from obdService to mHandler)
+	 * This function is called: When the application is still
+	 * connected to the ELM327 and the app is ended by the user (When the user ends the trip
+	 * (presses the 'End and Save' button, when a disconnect occurs
+	 * (CONNECT_FAILURE message flag is sent from obdService to )
 	 */
 	public void endAndSave() {
 		if (mobdService.isRunning()) {
-
-
+			mobdService.save();
+			mobdService.stop();
 		}
 		Button startOrSave = (Button) findViewById(R.id.start_or_save);
 		Button contTrip = (Button) findViewById(R.id.continue_trip);
 		ProgressBar waiting = (ProgressBar) findViewById(R.id.loadingContent);
 
-		SharedPreferences prefs = PreferenceManager
-				.getDefaultSharedPreferences(getApplicationContext());
-		SharedPreferences.Editor prefEdit = prefs.edit();
 
-		if (currNDP > 0l) {
 
-			contTrip.setVisibility(Button.VISIBLE);
-
-			prefEdit.putLong("numPtsForAvg", numDataPts).apply();
-			prefEdit.putFloat("avgMPG", (float) runningMpgAvg).apply();
-
-			prefEdit.putLong("currNDP", currNDP).apply();
-			prefEdit.putFloat("currSUM", (float) currSUM).apply();
-
-			if (startTSet == true) {
-				writeAvgData();
-				startTSet = false;
-			}
-
-			writeCommsToFile();
-			writeMpgData(fileStates.END);
+			
 			File file = new File(Environment.getExternalStorageDirectory(),
 					"mpg_data.json");
 			MediaScannerConnection.scanFile(this,
@@ -516,34 +398,7 @@ public class MainActivity extends Activity {
 
 						}
 					});
-			mainText.setText(Double.toString(currSubDispData));
-			DecimalFormat df = new DecimalFormat("#.00");
-			double ltAVG = 0.0;
-			if (numDataPts > 0L) {
-				ltAVG = runningMpgAvg / numDataPts;
-			}
 
-			String temp;
-			if (ltAVG < .1) {
-				temp = "0.0";
-			} else {
-
-				temp = df.format(ltAVG);
-
-			}
-			subText.setText("Lifetime AVG: " + temp);
-
-			unitText.setText("AVG " + prefs.getString("units_pref", "MPG")
-					+ "\nFOR TRIP");
-
-		} else if (prefs.getLong("numPtsForAvg", 0l) > 0l) {
-			contTrip.setVisibility(Button.VISIBLE);
-
-		} else {
-
-			contTrip.setVisibility(Button.GONE);
-
-		}
 
 		startOrSave.setText(R.string.start);
 		startOrSave.setOnClickListener(new View.OnClickListener() {
@@ -557,8 +412,6 @@ public class MainActivity extends Activity {
 
 		waiting.setVisibility(ProgressBar.GONE);
 	}
-
-
 
 	
 	public void AlertBox(String title, String message) {

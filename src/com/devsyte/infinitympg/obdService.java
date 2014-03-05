@@ -38,13 +38,24 @@ import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
+import android.support.v4.app.NotificationCompat;
 import android.text.format.Time;
 import android.util.Log;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 
 /*  This is the primary class for establishing, and maintaining the ELM327 Bluetooth Connection,
  *  As well as polling for data and the computations that need to be performed on that data.
+ *  
+ *  This class is essentially a wrapper around the actual Service, to allow for simple, isolated
+ *  use in the MainActivity.  The user must simply create an obdService object, then obdService.connect(),
+ *  then obdService.startMpgTracking(), in order to initiate a connection and begin streaming.
+ *  
+ *  Alternatively, calling sendOBDCommand allows the user to issue a single request and receive a single response,
+ *  or by specifiying and interval period (amount of time between calls), sendOBDCommand can also begin a recurring 
+ *  command to be sent to the device.
+ *  
+ *  *OBD COMMANDS (also known as Parameter Id's, or PID's) can be found here: http://en.wikipedia.org/wiki/OBD-II_PIDs
+ *  *Not all vehicles support all commands, and there may also be manufacturer specific commands not listed.
  *  
  *  The threads involved communicate with the MainActivity via the handler that is passed to the
  *  obdService constructor
@@ -57,14 +68,17 @@ public class obdService {
 
 	Context parentContext;
 
-	public static enum fileStates {
-		START, END, INPROG
-	};
-
+	/* cmdPrompt is primarily for debugging purposes, tracks all communication between the ELM327 and the application */
 	protected ArrayAdapter<String> cmdPrompt;
-
+	/* mpgDataList is simply a temporary array to hold the data to prevent constantly writing to a file*/
 	protected ArrayList<String> mpgDataList = new ArrayList<String>();
 
+	/*This is the array the is home to the OBD2 PID's we want to send.  They will be sent in order.  This needs to be watched,
+	 * currently the only support for multi-PID tracking is via startMpgTracking.  
+	 * 
+	 * TODO:  Find a *good* way to allow the user to submit a list of commands to issue, and then view them simultaneously,
+	 *  or better, allow them to submit some kind of heuristics to combine the these arbitrary commands
+	 *  */
 	protected ArrayList<String> obdCommands;
 
 	private BluetoothSocket mmSocket;
@@ -77,21 +91,14 @@ public class obdService {
 	protected boolean isBound = false;
 	protected boolean isRunning = false;
 	protected Messenger mService = null;
-	private Handler uiHandler;
+	
+	/*This is the messenger that will allow us to send interpreted data to the MainActivity */
+	private Messenger uiMessenger = null;
+	
 	
 	final Messenger mMessenger = new Messenger(new IncomingHandler());
 	ArrayList<Messenger> mClients = new ArrayList<Messenger>();
 	
-	public static enum ServiceMode {
-		MPG_MODE, CONSOLE_MODE
-	};
-
-	private ServiceMode currentMode;
-
-
-	private Time start = null;
-	private boolean startTSet = false;
-
 	/*
 	 * Just some useful constants for unit conversion
 	 */
@@ -123,19 +130,24 @@ public class obdService {
 	public double MAF = 0; // mass air flow, g/s
 	public double MPG = 0; // miles/gallon
 
-	private double currMPG = 0.0;
-	private long numDataPts = 0L;
+	/* currSum and currNDP are the primary means of tracking long term trips.
+	 * 
+	 * 
+	 */
 	private double currSUM = 0.0;
 	private long currNDP = 0L;
 	private double runningMpgAvg = 0.0;
-	private double currDisplayData = 0.0;
-	private double currSubDispData = 0.0;
+
 	
 	private DecimalFormat df = new DecimalFormat("#.##");
 
 
 	private SharedPreferences prefs;
 
+	/*  These functions are called to convert from the standard units (MPG, which everything is saved as),
+	 *  and the units specified by user preferences.
+	 * 
+	 * */
 	private double prefConversion(double mpgData) {
 		double convertedVal = 0;
 		String unitOutput = prefs.getString("units_pref", "MPG");
@@ -202,8 +214,8 @@ public class obdService {
 		// clients.
 		@Override
 		public void handleMessage(Message msg) {
-			String unitOutput;
-			Message uiMsg = Message.obtain(uiHandler);
+			String unitOutput = "NONE";
+			Message uiMsg = new Message();
 			Bundle b = new Bundle();
 			
 			switch (msg.what) {
@@ -227,11 +239,11 @@ public class obdService {
 				String tmpStr = msg.getData().getString("ret_bytes");
 				int byteOne, byteTwo;
 
-				if (tmpStr.contains("41 0D")) {
+				if (tmpStr.indexOf("0D")==0) {
 
 					byteOne = Integer.parseInt(tmpStr, 16);
 					vSpeed = byteOne;
-				} else if (reply.contains("41 10")) {
+				} else if (tmpStr.indexOf("10")==0) {
 					byteOne = Integer.parseInt(
 							tmpStr.substring(0, tmpStr.indexOf(" ")), 16);
 					byteTwo = Integer.parseInt(
@@ -244,26 +256,48 @@ public class obdService {
 								/ obdService.gramGasToGal; // gallons per hour, MAF is gram/second
 						MPG = idlePrefConversion(MPG);
 						unitOutput = getPrefUnits();
+						currSUM += 0.0;
+						++currNDP;
+						runningMpgAvg = currSUM/currNDP;
 					} else {
+
+
 						// miles pergallon, vspeed is in km/hr, MAF is in
 						// grams/seconds
 						MPG = (vSpeed * obdService.kmToMi)
 								/ ((MAF * obdService.stoichRatio * 3600.0) / obdService.gramGasToGal);
-
+						currSUM += MPG;
+						++currNDP;
+						runningMpgAvg = currSUM/currNDP;
+						
 						MPG = prefConversion(MPG);
 						unitOutput = getPrefIdleUnits();
+						
+
+						
 					}
 					b.putString("pref_units", unitOutput);
-					b.putDouble("mpg_data", MPG);
-					
-				}else{
-					b.putString("ret_bytes", msg.getData().getString("ret_bytes"));
+					b.putString("disp_str", df.format(MPG));
+					b.putString("sub_disp_str", df.format(runningMpgAvg));
+					b.putString("sub_pref_units", getPrefUnits());
+					uiMsg.arg1 = RETURNED_MPG;
+				}else{		
+					uiMsg.arg1 = RETURNED_BYTES;
+
+					b.putString("pref_units", unitOutput);
+
+					b.putString("disp_str", msg.getData().getString("ret_bytes"));
+
 
 				}
 								
 				uiMsg.setData(b);
 				uiMsg.what = MainActivity.WRITE_SCREEN;
-				uiMsg.sendToTarget();
+				try {
+					uiMessenger.send(uiMsg);
+				} catch (RemoteException e) {
+
+				}
 
 				break;
 			default:
@@ -272,52 +306,54 @@ public class obdService {
 		}
 	}
 	
-	protected obdService(Context context, Handler tHandler) {
+	public obdService(Context context, Messenger tMessenger) {
 		mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
-		uiHandler = tHandler;
+		uiMessenger = tMessenger;
 		parentContext = context;
 
 		prefs = PreferenceManager.getDefaultSharedPreferences(parentContext
 				.getApplicationContext());
 		runningMpgAvg = prefs.getFloat("avgMpg", 0.0f);
-		numDataPts = prefs.getLong("numPtsForAvg", 0l);
 		currSUM = prefs.getFloat("currSUM", 0.0f);
-		currNDP = prefs.getLong("currNDP", 0l);
+		currNDP = prefs.getLong("currNDP", 1l);
+		Message msg = new Message();
+		Bundle b = new Bundle();
+		if (currNDP>1) {
+			msg.what = MainActivity.WRITE_SCREEN;
 
-		if (currNDP > 0l) {
-			double calcedAvg = currSUM / currNDP;
+			runningMpgAvg = currSUM / currNDP;
 			// contTrip.setVisibility(Button.VISIBLE);
 
-			if (calcedAvg > 0f) {
-				currSubDispData = prefConversion(calcedAvg);
-			} else {
-				currSubDispData = 0.0;
-			}
 			// mainText.setText(Double.toString(currSubDispData));
 
-			DecimalFormat df = new DecimalFormat("#.00");
-			double ltAVG = 0.0;
-			if (numDataPts > 0L) {
-				ltAVG = runningMpgAvg / numDataPts;
-			}
-			String temp;
-			if (ltAVG < .1) {
-				temp = "0.0";
-			} else {
+			b.putString("pref_units", getPrefUnits());
 
-				temp = df.format(ltAVG);
-
-			}
+			b.putString("disp_str", df.format(prefConversion(runningMpgAvg)));
 			// subText.setText("Lifetime AVG: " + temp);
 
 			// unitText.setText("AVG " + prefs.getString("units_pref", "MPG")+
 			// "\nFOR TRIP");
 
 		} else {
+			msg.what = MainActivity.WRITE_SCREEN;
+			b.putString("pref_units", getPrefUnits());
+
+			b.putString("disp_str", df.format(0.0));
 			// contTrip.setVisibility(Button.GONE);
 
 		}
+		try {
+			uiMessenger.send(msg);
+		} catch (RemoteException e){
+		}
+	}
+	
+	public synchronized void clearTripData(){
+		
+		runningMpgAvg = 0.0;
+		currSUM = 0;
+		currNDP = 1;
 	}
 
 	public synchronized void connect(BluetoothDevice device) {
@@ -332,6 +368,10 @@ public class obdService {
 		mConnectedThread.start();
 	}
 	
+	/*Either of the sendObdCommand() methods will stop any current streams and poll the device
+	 * with the new command.  It will stream the data, polling at the specified interval if the overloaded
+	 * sendObdCommand(String, long) is used
+	 * */
 	public synchronized void sendObdCommand(String comm){
 		if (isBound) {
 			if (mService != null) {
@@ -366,34 +406,30 @@ public class obdService {
 		}
 	}
 		
-	public synchronized void setMode(ServiceMode newMode) {
-		currentMode = newMode;
+	
+	/*
+	 * This function is used to begin streaming fuel economy data
+	 */
+	public synchronized void startMpgTracking(){
+		obdCommands.clear();
+		obdCommands.add("41 0D");
+		obdCommands.add("41 10");
 
-		switch (currentMode) {
-		case MPG_MODE:
-			obdCommands.clear();
-			obdCommands.add("41 0D");
-			obdCommands.add("41 10");
+		Bundle b = new Bundle();
+		b.putLong("poll_interval", 100);
 
-			break;
-		case CONSOLE_MODE:
-			break;
+		Message msg = Message.obtain(null, SEND_SCHEDULED_OBD,0, 0);
+		msg.replyTo = mMessenger;
+		msg.setData(b);
+
+		try {
+			mService.send(msg);
+		} catch (RemoteException e) {
+
 		}
 		
-		if (isBound) {
-			if (mService != null) {
-				try {
-					obdCommands.clear();
-
-					Message msg = Message.obtain(null, SET_MODE,0, 0);
-					msg.replyTo = mMessenger;
-					mService.send(msg);
-				} catch (RemoteException e) {
-				}
-			}
-		}
-
 	}
+
 
 	public void AlertBox(String title, String message) {
 		new AlertDialog.Builder(parentContext).setTitle(title)
@@ -531,6 +567,15 @@ public class obdService {
 		return isRunning;
 	}
 
+	
+	public synchronized void save(){
+		
+		SharedPreferences.Editor prefEdit = prefs.edit();
+		prefEdit.putFloat("avgMPG", (float) runningMpgAvg).apply();
+		prefEdit.putLong("currNDP", currNDP).apply();
+		prefEdit.putFloat("currSUM", (float) currSUM).apply();
+
+	};
 	public synchronized void stop() {
 		if (mConnectThread != null) {
 			mConnectThread.cancel();
@@ -626,11 +671,8 @@ public class obdService {
 				case MSG_UNREGISTER_CLIENT:
 					mClients.remove(msg.replyTo);
 					break;
-				case SET_MODE:
-					timer.cancel();
-					timer = new Timer();
-					break;
 				case SEND_OBD:
+					timer.cancel();
 
 					pollDevice(msg.getData().getString("obd_command"));
 					break;
@@ -667,19 +709,26 @@ public class obdService {
 			// expanded notification
 			CharSequence text = getText(R.string.service_started);
 			// Set the icon, scrolling text and timestamp
-			Notification notification = new Notification(R.drawable.infinity,
-					text, System.currentTimeMillis());
+			NotificationCompat.Builder mBuilder =  
+					new NotificationCompat.Builder(this).setSmallIcon(R.drawable.infinity)
+					.setContentTitle(getText(R.string.service_label))
+					.setContentText(text);
+
 			// The PendingIntent to launch our activity if the user selects this
 			// notification
 			PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
 					new Intent(this, MainActivity.class), 0);
 			// Set the info for the views that show in the notification panel.
-			notification.setLatestEventInfo(this,
-					getText(R.string.service_label), text, contentIntent);
+			mBuilder.addAction(R.drawable.infinity, text, contentIntent);
+			int mNotificationId = 001;
+			// Gets an instance of the NotificationManager service
+			NotificationManager mNotifyMgr = 
+			        (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+			// Builds the notification and issues it.
+			mNotifyMgr.notify(mNotificationId, mBuilder.build());
 			// Send the notification.
 			// We use a layout id because it is a unique number. We use it later
 			// to cancel.
-			nm.notify(R.string.service_started, notification);
 		}
 
 		@Override
@@ -834,6 +883,7 @@ public class obdService {
 
 	};
 
+	/*  simply write the Command Prompt to a file, "ELM327comm_data.txt" */
 	public void writeCommsToFile() {
 
 		File file = new File(Environment.getExternalStorageDirectory(),
