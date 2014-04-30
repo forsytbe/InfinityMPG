@@ -98,8 +98,10 @@ public class ViewPrevActivity extends Activity {
 
 					
 				} catch (FileNotFoundException e) {
-					
+					mArrayAdapter.add("No Previous Trips");
+					Message message = mHandler.obtainMessage(ViewPrevActivity.FINISHED, -1, -1);
 
+					message.sendToTarget();
 				}
 
 				 
@@ -142,7 +144,7 @@ public class ViewPrevActivity extends Activity {
 	 */
 	private void setupActionBar() {
 
-		getActionBar().setDisplayHomeAsUpEnabled(true);
+		getActionBar().setDisplayHomeAsUpEnabled(false);
 
 	}
 

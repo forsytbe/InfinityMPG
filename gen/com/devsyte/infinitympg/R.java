@@ -34,24 +34,28 @@ public final class R {
         public static final int infinity=0x7f020006;
     }
     public static final class id {
-        public static final int action_settings=0x7f0a000a;
+        public static final int action_settings=0x7f0a000d;
         public static final int appName=0x7f0a0002;
         public static final int btDevList=0x7f0a0001;
         public static final int btStatus=0x7f0a0000;
+        public static final int button1=0x7f0a000c;
+        public static final int button2=0x7f0a000b;
         public static final int continue_trip=0x7f0a0006;
         public static final int loadingContent=0x7f0a0004;
         public static final int mainDisplay=0x7f0a0003;
         public static final int start_or_save=0x7f0a0005;
         public static final int subDisplay=0x7f0a0008;
+        public static final int textView1=0x7f0a000a;
         public static final int trip_list=0x7f0a0009;
         public static final int unitDisplay=0x7f0a0007;
-        public static final int view_prev_trips=0x7f0a000b;
+        public static final int view_prev_trips=0x7f0a000e;
     }
     public static final class layout {
         public static final int activity_bluetooth_settings=0x7f030000;
         public static final int activity_main=0x7f030001;
         public static final int activity_view_prev=0x7f030002;
-        public static final int custom_list_item_1=0x7f030003;
+        public static final int custom_alert=0x7f030003;
+        public static final int custom_list_item_1=0x7f030004;
     }
     public static final class menu {
         public static final int bluetooth_settings=0x7f090000;
@@ -61,11 +65,13 @@ public final class R {
     public static final class string {
         public static final int action_settings=0x7f070009;
         public static final int app_name=0x7f070000;
+        public static final int avgFileName=0x7f070024;
         public static final int bt_connect_fail=0x7f070017;
         public static final int bt_connect_success=0x7f070018;
         public static final int cancel=0x7f07001a;
         public static final int contButt=0x7f070007;
         public static final int curConsump=0x7f07000f;
+        public static final int currMiFileName=0x7f070025;
         public static final int default_none=0x7f070022;
         public static final int dispAvg=0x7f070021;
         public static final int edit_message=0x7f070005;

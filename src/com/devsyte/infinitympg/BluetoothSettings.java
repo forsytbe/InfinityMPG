@@ -42,7 +42,6 @@ import android.provider.Settings;
  */
 public class BluetoothSettings extends Activity {
 	
-	protected static final String DEVICE_DATA = "test.example.helloworld.DEVICE_DATA";
 	protected ArrayAdapter<String> mArrayAdapter;
 	protected BluetoothAdapter mBluetoothAdapter;
 	
@@ -65,7 +64,7 @@ public class BluetoothSettings extends Activity {
 	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
 	private void setupActionBar() {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-			getActionBar().setDisplayHomeAsUpEnabled(true);
+			getActionBar().setDisplayHomeAsUpEnabled(false);
 		}
 	}
 	
@@ -73,6 +72,8 @@ public class BluetoothSettings extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setupActionBar();
+		
+		
 		
 		mArrayAdapter = new ArrayAdapter<String>(this, R.layout.custom_list_item_1);
 
@@ -129,13 +130,17 @@ public class BluetoothSettings extends Activity {
 			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 					mBluetoothAdapter.cancelDiscovery();
 			      	String deviceData = mArrayAdapter.getItem(position);
+			      	
 		            Intent intent = new Intent();
-		            intent.putExtra(DEVICE_DATA, deviceData);
-		            
-		            
+		            intent.putExtra("DEVICE_DATA", deviceData);
+		            intent.putExtra("shouldCont", getIntent().getBooleanExtra("shouldCont", false));
+		            if (getParent() == null) {
+		                setResult(Activity.RESULT_OK, intent);
+		            } else {
+		                getParent().setResult(Activity.RESULT_OK, intent);
+		            }
 		            
 		            // Set result and finish this Activity
-		            setResult(Activity.RESULT_OK, intent);
 		            finish();
 			       
 			       

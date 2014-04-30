@@ -64,7 +64,7 @@ public class SettingsFragment extends PreferenceFragment {
 	        Preference pref = (Preference) findPreference("bt_device");
 			SharedPreferences.Editor prefs = pref.getSharedPreferences().edit();
 	        String deviceData = data.getExtras()
-	                .getString(BluetoothSettings.DEVICE_DATA);
+	                .getString("DEVICE_DATA");
 	        prefs.putString("bt_device", deviceData).apply();
 
 		}

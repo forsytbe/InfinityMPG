@@ -10,8 +10,8 @@
                     
             		 <intent
             		 	android:action="android.intent.action.VIEW"
-             			android:targetPackage="test.example.helloworld"
-             			android:targetClass="test.example.helloworld.DisplayMessageActivity" /> 
+             			android:targetPackage="com.devsyte.infinitympg"
+             			android:targetClass="com.devsyte.infinitympg.BluetoothSettings" /> 
                	
             </Preference>
             <ListPreference 

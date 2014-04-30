@@ -1,13 +1,9 @@
 package com.devsyte.infinitympg;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
 
-import com.devsyte.infinitympg.obdService.ConnectedService;
+import java.io.File;
+
+import com.devsyte.infinitympg.obdService;
 
 import android.media.MediaScannerConnection;
 import android.os.Bundle;
@@ -20,10 +16,12 @@ import android.os.RemoteException;
 import android.preference.PreferenceManager;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.text.format.Time;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.Window;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -65,8 +63,6 @@ public class MainActivity extends Activity {
 	 * stop on an obdService object, which will then send data directly to the MainActivity
 	 */
 	protected obdService mobdService = null;
-
-
 	/*
 	 * These are the primary TextViews that will be used to display the fuel
 	 * economy data, and units to the user
@@ -76,17 +72,13 @@ public class MainActivity extends Activity {
 	TextView appText;
 	TextView unitText;
 
+	protected SharedPreferences prefs; 
+
 	/*
 	 * These flags are used sent via message (from the obdService
 	 * ) to the MainActivity handler, where the data accompanying the message
 	 * can be interpreted, based on aforementioned flag
 	 */
-	public static final int WRITE_SCREEN = 1;
-	public static final int WRITE_PROMPT = 2;
-	public static final int WRITE_FILE = 3;
-	public static final int FINISH_IT = 4;
-	public static final int CONNECT_SUCCESS = 5;
-	public static final int CONNECT_FAILURE = 6;
 
 	/* mMessenger is where the messages from the obdService object will arrive.
 	 *  obdService performs all the logic and returns only what needs to be displayed in the main actvity
@@ -103,7 +95,7 @@ public class MainActivity extends Activity {
 
 			switch (msg.what) {
 	
-			case WRITE_SCREEN:
+			case obdService.WRITE_SCREEN:
 		
 				switch (msg.arg1) {
 
@@ -129,7 +121,7 @@ public class MainActivity extends Activity {
 			 * This flag is sent upon connection to and streaming from the
 			 * ELM327 device
 			 */
-			case CONNECT_SUCCESS:
+			case obdService.CONNECT_SUCCESS:
 
 				startOrSave.setText(R.string.saveBut);
 				startOrSave.setOnClickListener(new View.OnClickListener() {
@@ -139,6 +131,7 @@ public class MainActivity extends Activity {
 					}
 				});
 				contTrip.setVisibility(Button.GONE);
+				mobdService.startMpgTracking();
 
 				break;
 
@@ -149,26 +142,29 @@ public class MainActivity extends Activity {
 			 * unexpected disconnect occured (e.g. the ELM327/Android devices
 			 * have gone outside Bluetooth range)
 			 */
-			case CONNECT_FAILURE:
+			case obdService.CONNECT_FAILED:
 				// case 0 = the connection never happened, case 1 is a
 				// disconnect
 
 				switch (msg.arg1) {
-				case 0:
-					final String errMess = "Device not available.  Please find a device.";
-					final String title = "Connection Failed";
-					connectExceptAlert(title, errMess);
-
-					break;
-				case 1:
-					waiting.setVisibility(ProgressBar.VISIBLE);
-
-					break;
+					case 0:
+						final String errMess = "Device not available.\n\nPlease find a device.";
+						final String title = "Connection Failed";
+						connectExceptAlert(title, errMess);
+	
+						break;
+					case 1:
+						waiting.setVisibility(ProgressBar.VISIBLE);
+	
+						break;
+					
+					default:
+						break;
 				}
-
 				endAndSave();
 				break;
 			}
+			
 		}
 	}
 
@@ -178,7 +174,7 @@ public class MainActivity extends Activity {
 		setContentView(R.layout.activity_main);
 
 		PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
-
+		
 		ProgressBar waiting = (ProgressBar) findViewById(R.id.loadingContent);
 		waiting.setVisibility(ProgressBar.GONE);
 
@@ -200,26 +196,29 @@ public class MainActivity extends Activity {
 
 		mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 		if (mBluetoothAdapter == null) {
-			AlertBox("blue", "Bluetooth not supported");
+			AlertBox("Error", "Bluetooth not supported");
 			finish();
 		} else {
 			mobdService = new obdService(this, mMessenger);
+			if(mobdService.isRunning()){
+				mobdService.bind();
+			}
 		}
 	}
 
 	@Override
 	protected void onStart() {
 		super.onStart();
-
-
 		Button contTrip = (Button) findViewById(R.id.continue_trip);
 		Button startOrSave = (Button) findViewById(R.id.start_or_save);
+		contTrip.setVisibility(View.GONE);
 
 		/*
 		 * Go ahead and grab the saved trip values if they exist, display the
 		 * 'Continue Trip' button if they do, omit said button if they do not.
 		 */
-		
+	
+		prefs = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
 		if (!mobdService.isRunning()) {
 			startOrSave.setText(R.string.start);
 			startOrSave.setOnClickListener(new View.OnClickListener() {
@@ -230,8 +229,22 @@ public class MainActivity extends Activity {
 
 				}
 			});
-		} else {
+			if(prefs.getBoolean("isFirstTrip", true)){
+				String unitOutput = prefs.getString("units_pref", "MPG");
+				mainText.setText("\u221E");
 
+				unitText.setText(unitOutput);
+
+			}else{
+				String unitOutput = prefs.getString("units_pref", "MPG");
+				mainText.setText(obdService.df.format(obdService.prefConversion(prefs.getFloat("avgMPG", 0.0f))));
+
+				unitText.setText("Trip Avg In " + unitOutput);
+				contTrip.setVisibility(View.VISIBLE);
+				
+			}
+		} else {
+			
 			startOrSave.setText(R.string.saveBut);
 			startOrSave.setOnClickListener(new View.OnClickListener() {
 				@Override
@@ -240,6 +253,11 @@ public class MainActivity extends Activity {
 				}
 			});
 		}
+	}
+	@Override 
+	public void onResume(){
+		super.onResume();		
+		
 	}
 
 	@Override
@@ -285,10 +303,10 @@ public class MainActivity extends Activity {
 				
 				SharedPreferences.Editor prefs = PreferenceManager
 						.getDefaultSharedPreferences(this).edit();
-				String deviceData = data.getExtras().getString(
-						BluetoothSettings.DEVICE_DATA);
+				String deviceData = data.getStringExtra(
+						"DEVICE_DATA");
 				prefs.putString("bt_device", deviceData).apply();
-				startService(data.getBundleExtra("shouldCont").getBoolean("cont"));
+				startService(data.getBooleanExtra("shouldCont", false));
 				
 
 			}
@@ -312,9 +330,8 @@ public class MainActivity extends Activity {
 
 	@Override
 	public void onStop() {
-		if (mobdService.isRunning()) {
-			endAndSave();
-		}
+
+		
 
 		super.onStop();
 	}
@@ -344,29 +361,25 @@ public class MainActivity extends Activity {
 		if (deviceName.equals("None")) {
 
 			Intent intent = new Intent(this, BluetoothSettings.class);
-			Bundle b = new Bundle();
-			b.putBoolean("cont", cont);
-			intent.putExtra("shouldCont", b);
+			intent.putExtra("shouldCont", cont);
 			startActivityForResult(intent, 0); 
 		} else {
 			String address = deviceName.substring(deviceName.indexOf('\n') + 1);
 			// Get the BluetoothDevice object
-			BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
 			// Attempt to connect to the device
 			ProgressBar waiting = (ProgressBar) findViewById(R.id.loadingContent);
 			waiting.setVisibility(ProgressBar.VISIBLE);
 
 
 			if (cont) {
-				mobdService.connect(device);
-				mobdService.doBindService();
+				mobdService.connect(address);
 
 			}else{
 				mobdService.clearTripData();
-				mobdService.connect(device);
-				mobdService.doBindService();
-				mobdService.setMode(obdService.ServiceMode.MPG_MODE);
+				mobdService.connect(address);
+
 			}
+
 
 		}
 	}
@@ -374,16 +387,17 @@ public class MainActivity extends Activity {
 	/*
 	 * This function is called: When the application is still
 	 * connected to the ELM327 and the app is ended by the user (When the user ends the trip
-	 * (presses the 'End and Save' button, when a disconnect occurs
+	 *  and presses the 'End and Save' button), when a disconnect occurs
 	 * (CONNECT_FAILURE message flag is sent from obdService to )
 	 */
 	public void endAndSave() {
-		if (mobdService.isRunning()) {
-			mobdService.save();
-			mobdService.stop();
-		}
+		mobdService.stop();
+		
+		
 		Button startOrSave = (Button) findViewById(R.id.start_or_save);
 		Button contTrip = (Button) findViewById(R.id.continue_trip);
+		
+
 		ProgressBar waiting = (ProgressBar) findViewById(R.id.loadingContent);
 
 
@@ -409,6 +423,33 @@ public class MainActivity extends Activity {
 
 			}
 		});
+		
+		prefs = PreferenceManager
+				.getDefaultSharedPreferences(this);
+		
+		if(prefs.getBoolean("isFirstTrip", true)){
+			contTrip.setVisibility(View.GONE);
+		}else{
+			contTrip.setVisibility(View.VISIBLE);
+
+		}
+		
+		if(prefs.getBoolean("isFirstTrip", true)){
+			String unitOutput = prefs.getString("units_pref", "MPG");
+			mainText.setText("\u221E");
+			subText.setText("");
+
+			unitText.setText("Trip Avg In " + unitOutput);
+
+		}else{
+			String unitOutput = obdService.getPrefUnits();
+			mainText.setText(obdService.df.format(obdService.prefConversion(prefs.getFloat("avgMPG", 0.0f))));
+
+			unitText.setText("Trip Avg In " +unitOutput);
+			subText.setText("");
+			contTrip.setVisibility(View.VISIBLE);
+			
+		}
 
 		waiting.setVisibility(ProgressBar.GONE);
 	}
@@ -425,6 +466,7 @@ public class MainActivity extends Activity {
 	}
 
 	public void connectExceptAlert(String title, String message) {
+		
 		new AlertDialog.Builder(this).setTitle(title).setMessage(message)
 				.setPositiveButton("Find Device", new OnClickListener() {
 					public void onClick(DialogInterface arg0, int arg1) {
@@ -439,5 +481,51 @@ public class MainActivity extends Activity {
 					}
 				}).show();
 	}
+	
+	public void connectExceptAlert(String message){
+		final Dialog dialog1 = new Dialog(this);
+        dialog1.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog1.setContentView(R.layout.custom_alert);
 
+        TextView tv = (TextView) dialog1.findViewById(R.id.textView1);
+        tv.setText(message);
+        Button yes = (Button) dialog1.findViewById(R.id.button1);
+        yes.setText("Find Device");
+        Button no = (Button) dialog1.findViewById(R.id.button2);
+        no.setText("Cancel");
+        yes.setOnClickListener(new View.OnClickListener()
+        {
+
+			@Override
+			public void onClick(View v) {
+				Intent intent = new Intent(getApplicationContext(),
+						BluetoothSettings.class);
+
+				startActivityForResult(intent, 0); 
+			}
+        });
+        no.setOnClickListener(new View.OnClickListener()
+        {
+			@Override
+			public void onClick(View V) {
+				dialog1.dismiss();
+			}
+        });
+        dialog1.show();
+		
+	}
+
+	@Override
+	public void onDestroy(){
+			if(mobdService != null){			
+				try{
+					mobdService.unbind();
+				}catch(Exception e){
+					
+				}
+			}
+			super.onDestroy();
+		
+		
+	}
 }

@@ -37,5 +37,8 @@
     <string name="dispAvg">AVG MPG\nFOR TRIP</string>
     <string name="default_none">None</string>
     <string name="title_activity_view_prev">View Previous Trips</string>
+    <string name="avgFileName">mpg_avg.json</string>
+    <string name="currMiFileName">mpg_avg.json</string>
+    
 
 </resources>
